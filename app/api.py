@@ -10,6 +10,12 @@ from app.config import settings
 from app.database import Database
 from app.matrix_client import MatrixClient
 from app.models import (
+    ConfigStatusResponse,
+    ConfigureAccountRequest,
+    ConfigureAccountResponse,
+    DiscoverRoomsResponse,
+    FollowRoomRequest,
+    FollowRoomResponse,
     HealthResponse,
     MessagesRequest,
     MessagesResponse,
@@ -141,6 +147,149 @@ async def get_messages(request: MessagesRequest) -> MessagesResponse:
         window_start=start,
         window_end=end,
     )
+
+
+# ── Admin endpoints ───────────────────────────────────────────
+
+@router.get("/admin/status", response_model=ConfigStatusResponse)
+async def admin_status() -> ConfigStatusResponse:
+    """Get current configuration status."""
+    _reload_config_from_db()
+    configured = bool(settings.TCHAP_ACCESS_TOKEN and settings.TCHAP_USER_ID)
+    rooms_detail = []
+    for room_id in settings.allowed_rooms:
+        name = await _get_room_name(room_id) if configured else room_id
+        count = _db.get_message_count(room_id)
+        last_synced = _db.get_last_synced(room_id)
+        from datetime import datetime, timezone
+        ls = datetime.fromtimestamp(last_synced, tz=timezone.utc).isoformat() if last_synced else None
+        rooms_detail.append(RoomInfo(room_id=room_id, name=name, message_count=count, last_synced=ls))
+
+    return ConfigStatusResponse(
+        configured=configured,
+        homeserver_url=settings.TCHAP_HOMESERVER_URL,
+        user_id=settings.TCHAP_USER_ID,
+        allowed_rooms=sorted(settings.allowed_rooms),
+        total_messages=_db.get_total_messages(),
+        rooms_detail=rooms_detail,
+    )
+
+
+@router.post("/admin/configure", response_model=ConfigureAccountResponse)
+async def admin_configure(request: ConfigureAccountRequest) -> ConfigureAccountResponse:
+    """Configure the Tchap bot account. Tests the connection before saving."""
+    import httpx
+
+    # Test the connection first
+    test_url = f"{request.homeserver_url.rstrip('/')}/_matrix/client/v3/joined_rooms"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(test_url, headers={"Authorization": f"Bearer {request.access_token}"})
+        if resp.status_code == 401:
+            return ConfigureAccountResponse(ok=False, message="Authentification échouée (401). Vérifiez le token.")
+        resp.raise_for_status()
+        joined_rooms = resp.json().get("joined_rooms", [])
+    except Exception as exc:
+        return ConfigureAccountResponse(ok=False, message=f"Connexion échouée : {exc}")
+
+    # Save to DB for persistence
+    _db.set_config("homeserver_url", request.homeserver_url)
+    _db.set_config("user_id", request.user_id)
+    _db.set_config("access_token", request.access_token)
+    _db.set_config("device_id", request.device_id)
+
+    # Update runtime settings
+    settings.TCHAP_HOMESERVER_URL = request.homeserver_url
+    settings.TCHAP_USER_ID = request.user_id
+    settings.TCHAP_ACCESS_TOKEN = request.access_token
+    settings.TCHAP_DEVICE_ID = request.device_id
+
+    # Reinitialize the client
+    _reinit_client()
+
+    return ConfigureAccountResponse(
+        ok=True,
+        message=f"Compte configuré. {len(joined_rooms)} salon(s) rejoint(s).",
+        user_id=request.user_id,
+        joined_rooms=joined_rooms,
+    )
+
+
+@router.get("/admin/discover-rooms", response_model=DiscoverRoomsResponse)
+async def admin_discover_rooms() -> DiscoverRoomsResponse:
+    """List all rooms the bot has joined on the homeserver."""
+    if not settings.TCHAP_ACCESS_TOKEN:
+        return DiscoverRoomsResponse(ok=False, message="Compte non configuré. Utilisez /admin/configure d'abord.")
+
+    try:
+        room_ids = await _client.get_joined_rooms()
+    except Exception as exc:
+        return DiscoverRoomsResponse(ok=False, message=f"Erreur : {exc}")
+
+    rooms = []
+    for room_id in room_ids:
+        name = await _client.get_room_name(room_id)
+        is_followed = room_id in settings.allowed_rooms
+        rooms.append({"room_id": room_id, "name": name, "followed": is_followed})
+
+    return DiscoverRoomsResponse(ok=True, rooms=rooms)
+
+
+@router.post("/admin/follow-room", response_model=FollowRoomResponse)
+async def admin_follow_room(request: FollowRoomRequest) -> FollowRoomResponse:
+    """Add a room to the followed list."""
+    current = settings.allowed_rooms
+    if request.room_id in current:
+        return FollowRoomResponse(ok=True, message="Salon déjà suivi.", allowed_rooms=sorted(current))
+
+    current.add(request.room_id)
+    new_list = ",".join(sorted(current))
+    settings.TCHAP_ALLOWED_ROOM_IDS = new_list
+    _db.set_config("allowed_room_ids", new_list)
+
+    if request.name:
+        _room_names[request.room_id] = request.name
+
+    return FollowRoomResponse(ok=True, message=f"Salon {request.room_id} ajouté.", allowed_rooms=sorted(current))
+
+
+@router.post("/admin/unfollow-room", response_model=FollowRoomResponse)
+async def admin_unfollow_room(request: FollowRoomRequest) -> FollowRoomResponse:
+    """Remove a room from the followed list."""
+    current = settings.allowed_rooms
+    current.discard(request.room_id)
+    new_list = ",".join(sorted(current))
+    settings.TCHAP_ALLOWED_ROOM_IDS = new_list
+    _db.set_config("allowed_room_ids", new_list)
+
+    return FollowRoomResponse(ok=True, message=f"Salon {request.room_id} retiré.", allowed_rooms=sorted(current))
+
+
+def _reload_config_from_db() -> None:
+    """Reload config from DB on startup (DB takes priority over env vars if set)."""
+    stored = _db.get_all_config()
+    if stored.get("homeserver_url"):
+        settings.TCHAP_HOMESERVER_URL = stored["homeserver_url"]
+    if stored.get("access_token"):
+        settings.TCHAP_ACCESS_TOKEN = stored["access_token"]
+    if stored.get("user_id"):
+        settings.TCHAP_USER_ID = stored["user_id"]
+    if stored.get("device_id"):
+        settings.TCHAP_DEVICE_ID = stored["device_id"]
+    if stored.get("allowed_room_ids"):
+        settings.TCHAP_ALLOWED_ROOM_IDS = stored["allowed_room_ids"]
+
+
+def _reinit_client() -> None:
+    """Reinitialize the Matrix client after config change."""
+    global _client, _sync
+    _client = MatrixClient()
+    _sync = SyncService(_db, _client)
+    _room_names.clear()
+
+
+# Load persisted config on module import
+_reload_config_from_db()
 
 
 @router.post("/summary", response_model=SummaryResponse)

@@ -12,6 +12,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _DB_SCHEMA = """
+CREATE TABLE IF NOT EXISTS config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS messages (
     event_id TEXT PRIMARY KEY,
     room_id TEXT NOT NULL,
@@ -186,3 +191,24 @@ class Database:
                 (room_id,),
             ).fetchone()
             return row["last_synced_at"] if row else None
+
+    # -- Config persistence --
+
+    def set_config(self, key: str, value: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                (key, value),
+            )
+
+    def get_config(self, key: str) -> str | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM config WHERE key = ?", (key,)
+            ).fetchone()
+            return row["value"] if row else None
+
+    def get_all_config(self) -> dict[str, str]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT key, value FROM config").fetchall()
+            return {r["key"]: r["value"] for r in rows}

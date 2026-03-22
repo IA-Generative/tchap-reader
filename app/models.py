@@ -71,3 +71,45 @@ class HealthResponse(BaseModel):
     rooms_tracked: int
     total_messages: int
     missing_config: list[str] = Field(default_factory=list)
+
+
+# --- Admin models ---
+
+class ConfigureAccountRequest(BaseModel):
+    homeserver_url: str = Field(description="URL du homeserver (ex: https://matrix.agent.tchap.gouv.fr)")
+    user_id: str = Field(description="Matrix user ID du bot (ex: @bot:agent.tchap.gouv.fr)")
+    access_token: str = Field(description="Access token du compte bot")
+    device_id: str = Field(default="OWUI_BOT", description="Device ID (optionnel)")
+
+
+class ConfigureAccountResponse(BaseModel):
+    ok: bool
+    message: str
+    user_id: str = ""
+    joined_rooms: list[str] = Field(default_factory=list)
+
+
+class DiscoverRoomsResponse(BaseModel):
+    ok: bool
+    rooms: list[dict] = Field(default_factory=list)
+    message: str = ""
+
+
+class FollowRoomRequest(BaseModel):
+    room_id: str
+    name: str = ""
+
+
+class FollowRoomResponse(BaseModel):
+    ok: bool
+    message: str
+    allowed_rooms: list[str] = Field(default_factory=list)
+
+
+class ConfigStatusResponse(BaseModel):
+    configured: bool
+    homeserver_url: str
+    user_id: str
+    allowed_rooms: list[str]
+    total_messages: int
+    rooms_detail: list[RoomInfo] = Field(default_factory=list)
