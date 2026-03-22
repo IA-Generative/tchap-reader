@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tchap-reader
+  namespace: grafrag
+  labels:
+    app: tchap-reader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tchap-reader
+  template:
+    metadata:
+      labels:
+        app: tchap-reader
+    spec:
+      imagePullSecrets:
+        - name: grafrag-registry
+      containers:
+        - name: tchap-reader
+          image: ${REGISTRY}/tchap-reader:${IMAGE_TAG}
+          ports:
+            - containerPort: 8087
+          envFrom:
+            - secretRef:
+                name: grafrag-secrets
+            - configMapRef:
+                name: tchap-reader-config
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8087
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8087
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tchap-reader-data

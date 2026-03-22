@@ -1,0 +1,22 @@
+services:
+  tchap-reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    env_file:
+      - .env
+    volumes:
+      - tchap-data:/app/data
+    restart: unless-stopped
+    networks:
+      - grafrag
+
+networks:
+  grafrag:
+    external: true
+    name: grafrag-experimentation_default
+
+volumes:
+  tchap-data:
