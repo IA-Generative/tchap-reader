@@ -1,13 +1,38 @@
+# Secrets
 .env
 .env.local
+.env.production
+.env.test
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
 .venv/
 venv/
+env/
 .pytest_cache/
 .mypy_cache/
+
+# Data
 *.db
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 ._*
 .Spotlight-V100
 .Trashes
+Icon?
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
