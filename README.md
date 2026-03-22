@@ -2,6 +2,13 @@
 
 Service de lecture et d'analyse de salons Tchap (protocole Matrix) intégré à Open WebUI. Multi-utilisateur avec accès individuel, groupe et global.
 
+## Copie d'écran
+
+
+![Logo MirAI](./images/capture-ecran-tcchap-reader.png)
+
+
+
 ## Architecture
 
 ```
