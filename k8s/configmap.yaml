@@ -14,6 +14,8 @@ data:
   TCHAP_MAX_WINDOW_DAYS: "30"
   TCHAP_ANONYMIZE_OUTPUT: "true"
   TCHAP_LOG_LEVEL: "INFO"
-  # TCHAP_ALLOWED_ROOM_IDS: set in grafrag-secrets or override here
-  # TCHAP_ACCESS_TOKEN: set in grafrag-secrets
-  # TCHAP_USER_ID: set in grafrag-secrets
+  # Multi-tenant (v0.2)
+  OPENWEBUI_BASE_URL: "http://open-webui:8080"
+  SSO_CALLBACK_BASE_URL: "http://tchap-reader:8087"
+  # Secrets in: grafrag-secrets
+  # TCHAP_ACCESS_TOKEN, TCHAP_USER_ID, TCHAP_ALLOWED_ROOM_IDS

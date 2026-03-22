@@ -1,4 +1,4 @@
-"""Prepare message data for LLM analysis — pseudonymization, formatting, stats."""
+"""Prepare message data for LLM analysis — pseudonymization, formatting, stats (multi-tenant)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SummaryService:
-    """Prepares room messages for LLM consumption."""
+    """Prepares room messages for LLM consumption — multi-tenant aware."""
 
     def __init__(self, db: Database):
         self._db = db
@@ -25,6 +25,8 @@ class SummaryService:
         room_name: str,
         since_hours: int = 168,
         max_messages: int = 500,
+        owner_type: str | None = None,
+        owner_id: str | None = None,
     ) -> dict:
         """Build a compact summary for the LLM.
 
@@ -42,6 +44,8 @@ class SummaryService:
             since_ts=since_ms,
             until_ts=now_ms,
             limit=min(max_messages, settings.TCHAP_MAX_MESSAGES_PER_ANALYSIS),
+            owner_type=owner_type,
+            owner_id=owner_id,
         )
 
         if not messages:

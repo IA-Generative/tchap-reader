@@ -3,6 +3,7 @@
 .env.local
 .env.production
 .env.test
+.tchap_test_env
 
 # Python
 __pycache__/

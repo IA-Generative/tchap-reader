@@ -1,8 +1,9 @@
-"""FastAPI application factory."""
+"""FastAPI application factory — multi-tenant version."""
 
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -16,22 +17,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Startup and shutdown events."""
+    # Startup
+    missing = settings.validate_config()
+    if missing:
+        logger.warning("Legacy config incomplete: %s — multi-tenant mode active", missing)
+    else:
+        logger.info(
+            "Tchap Reader starting — homeserver=%s, allowed_rooms=%d",
+            settings.TCHAP_HOMESERVER_URL,
+            len(settings.allowed_rooms),
+        )
+    logger.info(
+        "Multi-tenant enabled — OpenWebUI: %s, SSO callback: %s",
+        settings.OPENWEBUI_BASE_URL,
+        settings.SSO_CALLBACK_BASE_URL,
+    )
+    yield
+    # Shutdown
+    logger.info("Tchap Reader shutting down")
+
+
 def create_app() -> FastAPI:
     application = FastAPI(
         title="Tchap Reader — Matrix Sync & Analysis Service",
-        version="0.1.0",
+        description="Multi-tenant Matrix room analysis for Open WebUI",
+        version="0.2.0",
+        lifespan=lifespan,
     )
     application.include_router(router)
-
-    @application.on_event("startup")
-    async def startup():
-        missing = settings.validate_config()
-        if missing:
-            logger.error("Missing config: %s", missing)
-        else:
-            logger.info("Tchap Reader starting — homeserver=%s, allowed_rooms=%d",
-                        settings.TCHAP_HOMESERVER_URL, len(settings.allowed_rooms))
-
     return application
 
 

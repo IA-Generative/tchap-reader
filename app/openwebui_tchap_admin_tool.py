@@ -1,8 +1,8 @@
 """
 title: Tchap Admin - Configuration des salons Matrix
-description: Configurer le compte bot Tchap, découvrir les salons disponibles, choisir lesquels suivre. Outil d'administration.
+description: Configurer le compte bot Tchap, découvrir les salons disponibles, choisir lesquels suivre. Outil d'administration. Compatible avec le tool unifié tchap_reader v0.2.
 author: tchap-reader
-version: 0.1.0
+version: 0.2.0
 """
 
 from pydantic import BaseModel, Field
@@ -23,8 +23,19 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
+    def _user_headers(self, user: dict | None) -> dict[str, str]:
+        if not user:
+            return {}
+        return {
+            "X-User-Id": user.get("id", ""),
+            "X-User-Email": user.get("email", ""),
+            "X-User-Role": user.get("role", "user"),
+            "X-User-Token": user.get("token", ""),
+        }
+
     async def tchap_status(
         self,
+        __user__: dict = None,
         __event_emitter__=None,
     ) -> str:
         """
@@ -38,9 +49,11 @@ class Tools:
         if __event_emitter__:
             await __event_emitter__({"type": "status", "data": {"description": "Vérification de la configuration...", "done": False}})
 
+        headers = self._user_headers(__user__)
+
         try:
             async with httpx.AsyncClient(timeout=self.valves.timeout) as client:
-                resp = await client.get(f"{self.valves.base_url}/admin/status")
+                resp = await client.get(f"{self.valves.base_url}/admin/status", headers=headers)
                 resp.raise_for_status()
                 status = resp.json()
         except Exception as exc:
@@ -62,29 +75,21 @@ class Tools:
 
         lines = [
             "# Tchap — Configuration\n",
-            f"- **Homeserver** : `{status['homeserver_url']}`",
-            f"- **Compte bot** : `{status['user_id']}`",
-            f"- **Messages stockés** : {status['total_messages']}",
-            f"- **Salons suivis** : {len(status['allowed_rooms'])}",
+            f"- **Homeserver** : `{status.get('homeserver_url', 'N/A')}`",
+            f"- **Compte bot** : `{status.get('user_id', 'N/A')}`",
+            f"- **Messages stockés** : {status.get('total_messages', 0)}",
+            f"- **Comptes configurés** : {status.get('accounts', 0)}",
+            f"- **Salons suivis** : {len(status.get('allowed_rooms', []))}",
         ]
 
-        if status.get("rooms_detail"):
-            lines.append("\n## Salons suivis\n")
-            for r in status["rooms_detail"]:
-                synced = r.get("last_synced", "jamais")
-                lines.append(
-                    f"- **{r['name']}**\n"
-                    f"  - `{r['room_id']}`\n"
-                    f"  - {r['message_count']} messages | dernière sync : {synced}"
-                )
-        elif status["allowed_rooms"]:
+        if status.get("allowed_rooms"):
             lines.append("\n## Salons suivis\n")
             for rid in status["allowed_rooms"]:
                 lines.append(f"- `{rid}`")
 
-        if not status["allowed_rooms"]:
+        if not status.get("allowed_rooms"):
             lines.append(
-                "\n> ⚠️ Aucun salon suivi. Utilisez **tchap_discover_and_follow** "
+                "\n> Aucun salon suivi. Utilisez **tchap_discover_and_follow** "
                 "pour découvrir et sélectionner les salons."
             )
 
@@ -96,6 +101,7 @@ class Tools:
         user_id: str,
         access_token: str,
         device_id: str = "OWUI_BOT",
+        __user__: dict = None,
         __event_emitter__=None,
     ) -> str:
         """
@@ -104,14 +110,16 @@ class Tools:
 
         :param homeserver_url: URL du homeserver Matrix (ex: https://matrix.agent.tchap.gouv.fr).
         :param user_id: Identifiant Matrix du bot (ex: @monbot:agent.tchap.gouv.fr).
-        :param access_token: Token d'accès du compte bot. Obtenu via Element ou l'API login.
+        :param access_token: Token d'accès du compte bot.
         :param device_id: Device ID optionnel (défaut: OWUI_BOT).
-        :return: Résultat de la configuration avec la liste des salons disponibles.
+        :return: Résultat de la configuration.
         """
         import httpx
 
         if __event_emitter__:
             await __event_emitter__({"type": "status", "data": {"description": "Test de la connexion au homeserver...", "done": False}})
+
+        headers = self._user_headers(__user__)
 
         try:
             async with httpx.AsyncClient(timeout=self.valves.timeout) as client:
@@ -123,6 +131,7 @@ class Tools:
                         "access_token": access_token,
                         "device_id": device_id,
                     },
+                    headers=headers,
                 )
                 resp.raise_for_status()
                 result = resp.json()
@@ -137,7 +146,7 @@ class Tools:
 
         rooms = result.get("joined_rooms", [])
         lines = [
-            "# Tchap — Compte configuré ✓\n",
+            "# Tchap — Compte configuré\n",
             f"- **Compte** : `{result.get('user_id')}`",
             f"- **Salons rejoints** : {len(rooms)}",
             "",
@@ -153,21 +162,24 @@ class Tools:
         self,
         action: str = "list",
         room_id: str = "",
+        __user__: dict = None,
         __event_emitter__=None,
     ) -> str:
         """
         Découvrir les salons disponibles et choisir lesquels suivre.
 
         Actions :
-        - "list" : affiche tous les salons rejoints par le bot, avec leur statut (suivi ou non)
+        - "list" : affiche tous les salons rejoints par le bot
         - "follow" : ajoute un salon à la liste de suivi (fournir room_id)
         - "unfollow" : retire un salon de la liste de suivi (fournir room_id)
 
         :param action: "list", "follow" ou "unfollow".
-        :param room_id: ID du salon pour follow/unfollow (ex: !abc:agent.tchap.gouv.fr).
+        :param room_id: ID du salon pour follow/unfollow.
         :return: Liste des salons ou confirmation de l'action.
         """
         import httpx
+
+        headers = self._user_headers(__user__)
 
         if action == "list":
             if __event_emitter__:
@@ -175,7 +187,10 @@ class Tools:
 
             try:
                 async with httpx.AsyncClient(timeout=self.valves.timeout) as client:
-                    resp = await client.get(f"{self.valves.base_url}/admin/discover-rooms")
+                    resp = await client.get(
+                        f"{self.valves.base_url}/admin/discover-rooms",
+                        headers=headers,
+                    )
                     resp.raise_for_status()
                     result = resp.json()
             except Exception as exc:
@@ -196,7 +211,7 @@ class Tools:
             not_followed = [r for r in rooms if not r.get("followed")]
 
             if followed:
-                lines.append("## ✓ Salons suivis\n")
+                lines.append("## Salons suivis\n")
                 for r in followed:
                     lines.append(f"- **{r['name']}** — `{r['room_id']}`")
 
@@ -228,6 +243,7 @@ class Tools:
                     resp = await client.post(
                         f"{self.valves.base_url}/admin/{endpoint}",
                         json={"room_id": room_id},
+                        headers=headers,
                     )
                     resp.raise_for_status()
                     result = resp.json()
@@ -240,7 +256,7 @@ class Tools:
             if result.get("ok"):
                 followed = result.get("allowed_rooms", [])
                 return (
-                    f"# {verb} effectué ✓\n\n"
+                    f"# {verb} effectué\n\n"
                     f"{result.get('message', '')}\n\n"
                     f"**Salons suivis ({len(followed)})** : {', '.join(f'`{r}`' for r in followed) or 'aucun'}"
                 )

@@ -1,10 +1,9 @@
-"""Incremental sync service — fetches messages from Matrix and stores them."""
+"""Incremental sync service — fetches messages from Matrix and stores them (multi-tenant)."""
 
 from __future__ import annotations
 
 import logging
 
-from app.config import settings
 from app.database import Database
 from app.matrix_client import MatrixClient
 
@@ -12,23 +11,29 @@ logger = logging.getLogger(__name__)
 
 
 class SyncService:
-    """Manages incremental sync of Matrix rooms."""
+    """Manages incremental sync of Matrix rooms — multi-tenant aware."""
 
     def __init__(self, db: Database, client: MatrixClient):
         self._db = db
         self._client = client
 
-    def _is_allowed(self, room_id: str) -> bool:
-        allowed = settings.allowed_rooms
-        return not allowed or room_id in allowed
+    async def sync_room(
+        self,
+        room_id: str,
+        owner_type: str = "global",
+        owner_id: str = "global",
+        allowed_rooms: set[str] | None = None,
+    ) -> dict:
+        """Sync a single room incrementally. Returns sync stats.
 
-    async def sync_room(self, room_id: str) -> dict:
-        """Sync a single room incrementally. Returns sync stats."""
-        if not self._is_allowed(room_id):
+        If allowed_rooms is provided, checks that room_id is in the set.
+        """
+        if allowed_rooms is not None and room_id not in allowed_rooms:
             raise PermissionError(f"Room {room_id} is not in the allowlist")
 
-        since = self._db.get_next_batch(room_id)
-        logger.info("Syncing room %s (since=%s)", room_id, since or "initial")
+        since = self._db.get_next_batch(room_id, owner_type, owner_id)
+        logger.info("Syncing room %s (owner=%s/%s, since=%s)",
+                     room_id, owner_type, owner_id, since or "initial")
 
         data = await self._client.sync(
             since=since,
@@ -44,15 +49,16 @@ class SyncService:
 
         new_count = 0
         for event in events:
-            processed = self._process_event(event, room_id)
+            processed = self._process_event(event, room_id, owner_type, owner_id)
             if processed:
                 new_count += 1
 
         if next_batch:
-            self._db.save_next_batch(room_id, next_batch)
+            self._db.save_next_batch(room_id, next_batch, owner_type, owner_id)
 
-        total = self._db.get_message_count(room_id)
-        logger.info("Room %s: %d new messages (total: %d)", room_id, new_count, total)
+        total = self._db.get_message_count(room_id, owner_type, owner_id)
+        logger.info("Room %s (owner=%s/%s): %d new messages (total: %d)",
+                     room_id, owner_type, owner_id, new_count, total)
 
         return {
             "room_id": room_id,
@@ -61,7 +67,10 @@ class SyncService:
             "next_batch": next_batch,
         }
 
-    def _process_event(self, event: dict, room_id: str) -> bool:
+    def _process_event(
+        self, event: dict, room_id: str,
+        owner_type: str = "global", owner_id: str = "global",
+    ) -> bool:
         """Process a single Matrix event. Returns True if a message was stored."""
         event_type = event.get("type", "")
         event_id = event.get("event_id", "")
@@ -125,4 +134,6 @@ class SyncService:
             timestamp=origin_ts,
             body=body,
             reply_to_event_id=reply_to,
+            owner_type=owner_type,
+            owner_id=owner_id,
         )

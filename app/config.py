@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
+    # Legacy single-bot config (kept for backward compat)
     TCHAP_HOMESERVER_URL: str = "https://matrix.agent.tchap.gouv.fr"
     TCHAP_ACCESS_TOKEN: str = ""
     TCHAP_USER_ID: str = ""
@@ -23,6 +24,10 @@ class Settings(BaseSettings):
     TCHAP_ANONYMIZE_OUTPUT: bool = True
     TCHAP_LOG_LEVEL: str = "INFO"
     TCHAP_MAX_WINDOW_DAYS: int = 30
+
+    # Multi-tenant config
+    OPENWEBUI_BASE_URL: str = "http://open-webui:8080"
+    SSO_CALLBACK_BASE_URL: str = "http://tchap-reader:8087"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

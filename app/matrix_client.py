@@ -1,4 +1,4 @@
-"""HTTP client for Matrix/Tchap API."""
+"""HTTP client for Matrix/Tchap API — multi-account support."""
 
 from __future__ import annotations
 
@@ -15,16 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 class MatrixClient:
-    """Lightweight Matrix client for read-only sync operations."""
+    """Lightweight Matrix client for read-only sync operations.
 
-    def __init__(self):
-        self._base_url = settings.TCHAP_HOMESERVER_URL.rstrip("/")
-        self._token = settings.TCHAP_ACCESS_TOKEN
+    Supports multi-account by accepting per-call overrides for base_url and token.
+    Falls back to global settings if not provided.
+    """
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        token: str | None = None,
+    ):
+        self._base_url = (base_url or settings.TCHAP_HOMESERVER_URL).rstrip("/")
+        self._token = token or settings.TCHAP_ACCESS_TOKEN
         self._rate_limit = settings.TCHAP_API_RATE_LIMIT_PER_SEC
         self._last_request_time: float = 0
 
-    def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._token}"}
+    def _headers(self, token: str | None = None) -> dict[str, str]:
+        return {"Authorization": f"Bearer {token or self._token}"}
 
     async def _rate_limit_wait(self) -> None:
         """Enforce rate limiting between requests."""
@@ -42,11 +50,14 @@ class MatrixClient:
         method: str,
         path: str,
         params: dict | None = None,
+        json_body: dict | None = None,
         timeout: int = 30,
         retries: int = 2,
+        base_url: str | None = None,
+        token: str | None = None,
     ) -> dict:
         """Make an authenticated request to the Matrix API with retry and rate limiting."""
-        url = f"{self._base_url}{path}"
+        url = f"{(base_url or self._base_url).rstrip('/')}{path}"
 
         for attempt in range(retries + 1):
             await self._rate_limit_wait()
@@ -54,7 +65,10 @@ class MatrixClient:
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     resp = await client.request(
-                        method, url, headers=self._headers(), params=params
+                        method, url,
+                        headers=self._headers(token),
+                        params=params,
+                        json=json_body,
                     )
 
                 if resp.status_code == 429:
@@ -64,7 +78,7 @@ class MatrixClient:
                     continue
 
                 if resp.status_code == 401:
-                    logger.error("Authentication failed — check TCHAP_ACCESS_TOKEN")
+                    logger.error("Authentication failed — check access token")
                     raise PermissionError("Matrix authentication failed (401)")
 
                 resp.raise_for_status()
@@ -136,3 +150,11 @@ class MatrixClient:
         return await self._request(
             "GET", "/_matrix/client/v3/sync", params=params, timeout=60
         )
+
+
+def create_client_for_account(account: dict) -> MatrixClient:
+    """Create a MatrixClient instance for a specific account from the DB."""
+    return MatrixClient(
+        base_url=account["homeserver_url"],
+        token=account["access_token"],
+    )
