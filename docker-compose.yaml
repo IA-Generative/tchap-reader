@@ -1,5 +1,29 @@
+# tchap-reader — Feature service
+#
+# Mode modulaire (socle lancé séparément) :
+#   docker compose up -d                         → tchap-reader uniquement
+#
+# Mode legacy (ancien réseau grafrag-experimentation_default) :
+#   docker compose --profile legacy up -d
+
 services:
   tchap-reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    env_file:
+      - .env
+    volumes:
+      - tchap-data:/app/data
+    restart: unless-stopped
+    networks:
+      - owui-net
+
+  # Legacy: si besoin de rejoindre l'ancien réseau monorepo
+  tchap-reader-legacy:
+    profiles: ["legacy"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,6 +38,8 @@ services:
       - grafrag
 
 networks:
+  owui-net:
+    external: true
   grafrag:
     external: true
     name: grafrag-experimentation_default

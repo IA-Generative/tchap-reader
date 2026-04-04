@@ -1,0 +1,28 @@
+name: tchap-reader
+version: "1.0.0"
+
+services:
+  - name: tchap-reader
+    port: 8087
+
+pipelines:
+  files: []
+
+tools:
+  entries:
+    - id: tchap_reader
+      source_file: app/openwebui_tchap_tool.py
+      service_name: tchap-reader
+      service_port: 8087
+    - id: tchap_admin
+      source_file: app/openwebui_tchap_admin_tool.py
+      service_name: tchap-reader
+      service_port: 8087
+
+model_tools: []
+
+env_vars: []
+
+k8s:
+  namespace: owui-socle
+  custom_image: true
