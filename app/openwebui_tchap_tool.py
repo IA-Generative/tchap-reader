@@ -1,7 +1,7 @@
 """
 title: Tchap - Analyse et gestion de salons Matrix/Tchap
 description: Configurer l'accès Tchap, lister et analyser les salons, administrer la plateforme. Multi-utilisateur avec accès individuel, groupe et global.
-author: tchap-reader
+author: tchapreader
 version: 0.3.0
 """
 
@@ -13,7 +13,7 @@ class Tools:
         """Configuration admin — Workspace > Tools > Tchap Reader > engrenage."""
         base_url: str = Field(
             default="http://host.docker.internal:8087",
-            description="URL du service tchap-reader",
+            description="URL du service tchapreader",
         )
         timeout: int = Field(
             default=120,

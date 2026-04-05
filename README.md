@@ -1,4 +1,4 @@
-# Tchap Reader — Analyse de salons Matrix/Tchap pour Open WebUI
+# TchapReader — Analyse de salons Matrix/Tchap pour Open WebUI
 
 Service de lecture et d'analyse de salons Tchap (protocole Matrix) intégré à Open WebUI. Multi-utilisateur avec accès individuel, groupe et global.
 
@@ -23,7 +23,7 @@ Utilisateur (Open WebUI + Keycloak SSO)
            │ HTTP
            ▼
 ┌──────────────────────────────────────┐
-│  tchap-reader (FastAPI)              │
+│  tchapreader (FastAPI)              │
 │  Multi-tenant : user / group / global│
 │  /setup/* → /rooms → /sync → /summary│
 │                                      │
@@ -81,7 +81,7 @@ curl http://localhost:8087/healthz
 | Variable | Défaut | Description |
 |----------|--------|-------------|
 | `OPENWEBUI_BASE_URL` | `http://open-webui:8080` | URL interne d'Open WebUI |
-| `SSO_CALLBACK_BASE_URL` | `http://tchap-reader:8087` | URL du callback SSO |
+| `SSO_CALLBACK_BASE_URL` | `http://tchapreader:8087` | URL du callback SSO |
 
 ### Variables optionnelles
 
@@ -218,7 +218,7 @@ pytest tests/ -v
 ## Structure du projet
 
 ```
-tchap-reader/
+tchapreader/
 ├── app/
 │   ├── api.py                        # Endpoints FastAPI multi-tenant
 │   ├── auth.py                       # Vérification des droits

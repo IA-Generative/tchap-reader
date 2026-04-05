@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tchap-reader-config
+  name: tchapreader-config
   namespace: grafrag
   labels:
-    app: tchap-reader
+    app: tchapreader
 data:
   TCHAP_HOMESERVER_URL: "https://matrix.agent.tchap.gouv.fr"
   TCHAP_STORE_PATH: "/app/data/tchap.db"
@@ -16,6 +16,6 @@ data:
   TCHAP_LOG_LEVEL: "INFO"
   # Multi-tenant (v0.2)
   OPENWEBUI_BASE_URL: "http://open-webui:8080"
-  SSO_CALLBACK_BASE_URL: "http://tchap-reader:8087"
+  SSO_CALLBACK_BASE_URL: "http://tchapreader:8087"
   # Secrets in: grafrag-secrets
   # TCHAP_ACCESS_TOKEN, TCHAP_USER_ID, TCHAP_ALLOWED_ROOM_IDS

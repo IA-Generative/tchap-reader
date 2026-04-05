@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-IMAGE="${TCHAP_IMAGE:-tchap-reader:local}"
-CONTAINER="${TCHAP_CONTAINER:-tchap-reader}"
+IMAGE="${TCHAP_IMAGE:-tchapreader:local}"
+CONTAINER="${TCHAP_CONTAINER:-tchapreader}"
 PORT="${TCHAP_PORT:-8087}"
 NETWORK="${DOCKER_NETWORK:-grafrag-experimentation_default}"
 
@@ -31,7 +31,7 @@ docker run -d \
   ${NETWORK_FLAG} \
   --publish "${PORT}:8087" \
   --env-file "${PROJECT_ROOT}/.env" \
-  -v tchap-reader-data:/app/data \
+  -v tchapreader-data:/app/data \
   --restart unless-stopped \
   "${IMAGE}"
 

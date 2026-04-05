@@ -1,32 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tchap-reader
+  name: tchapreader
   namespace: grafrag
   labels:
-    app: tchap-reader
+    app: tchapreader
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tchap-reader
+      app: tchapreader
   template:
     metadata:
       labels:
-        app: tchap-reader
+        app: tchapreader
     spec:
       imagePullSecrets:
         - name: grafrag-registry
       containers:
-        - name: tchap-reader
-          image: ${REGISTRY}/tchap-reader:${IMAGE_TAG}
+        - name: tchapreader
+          image: ${REGISTRY}/tchapreader:${IMAGE_TAG}
           ports:
             - containerPort: 8087
           envFrom:
             - secretRef:
                 name: grafrag-secrets
             - configMapRef:
-                name: tchap-reader-config
+                name: tchapreader-config
           volumeMounts:
             - name: data
               mountPath: /app/data
@@ -56,4 +56,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: tchap-reader-data
+            claimName: tchapreader-data

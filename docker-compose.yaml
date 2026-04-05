@@ -1,13 +1,13 @@
-# tchap-reader — Feature service
+# tchapreader — Feature service
 #
 # Mode modulaire (socle lancé séparément) :
-#   docker compose up -d                         → tchap-reader uniquement
+#   docker compose up -d                         → tchapreader uniquement
 #
 # Mode legacy (ancien réseau grafrag-experimentation_default) :
 #   docker compose --profile legacy up -d
 
 services:
-  tchap-reader:
+  tchapreader:
     build:
       context: .
       dockerfile: Dockerfile
@@ -22,7 +22,7 @@ services:
       - owui-net
 
   # Legacy: si besoin de rejoindre l'ancien réseau monorepo
-  tchap-reader-legacy:
+  tchapreader-legacy:
     profiles: ["legacy"]
     build:
       context: .

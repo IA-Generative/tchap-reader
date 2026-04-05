@@ -1,8 +1,8 @@
-name: tchap-reader
+name: tchapreader
 version: "1.0.0"
 
 services:
-  - name: tchap-reader
+  - name: tchapreader
     port: 8087
 
 pipelines:
@@ -10,13 +10,13 @@ pipelines:
 
 tools:
   entries:
-    - id: tchap_reader
+    - id: tchapreader
       source_file: app/openwebui_tchap_tool.py
-      service_name: tchap-reader
+      service_name: tchapreader
       service_port: 8087
-    - id: tchap_admin
+    - id: tchapreader_admin
       source_file: app/openwebui_tchap_admin_tool.py
-      service_name: tchap-reader
+      service_name: tchapreader
       service_port: 8087
 
 model_tools: []

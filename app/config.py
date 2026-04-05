@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Multi-tenant config
     OPENWEBUI_BASE_URL: str = "http://open-webui:8080"
-    SSO_CALLBACK_BASE_URL: str = "http://tchap-reader:8087"
+    SSO_CALLBACK_BASE_URL: str = "http://tchapreader:8087"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

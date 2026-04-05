@@ -1,7 +1,7 @@
 """
 title: Tchap Admin - Configuration des salons Matrix
-description: Configurer le compte bot Tchap, découvrir les salons disponibles, choisir lesquels suivre. Outil d'administration. Compatible avec le tool unifié tchap_reader v0.2.
-author: tchap-reader
+description: Configurer le compte bot Tchap, découvrir les salons disponibles, choisir lesquels suivre. Outil d'administration.
+author: tchapreader
 version: 0.2.0
 """
 
@@ -13,7 +13,7 @@ class Tools:
         """Configuration dans le panneau admin OpenWebUI."""
         base_url: str = Field(
             default="http://host.docker.internal:8087",
-            description="URL du service tchap-reader",
+            description="URL du service tchapreader",
         )
         timeout: int = Field(
             default=30,
@@ -57,7 +57,7 @@ class Tools:
                 resp.raise_for_status()
                 status = resp.json()
         except Exception as exc:
-            return f"# Erreur\n\nImpossible de contacter le service tchap-reader : {exc}"
+            return f"# Erreur\n\nImpossible de contacter le service tchapreader : {exc}"
 
         if __event_emitter__:
             await __event_emitter__({"type": "status", "data": {"description": "OK", "done": True}})

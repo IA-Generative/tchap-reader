@@ -30,14 +30,14 @@ Les Valves sont les paramètres de connexion du tool vers le backend.
 
    | Valve | Valeur | Description |
    |-------|--------|-------------|
-   | `base_url` | `http://tchap-reader:8087` | URL du backend (réseau Docker interne) |
+   | `base_url` | `http://tchapreader:8087` | URL du backend (réseau Docker interne) |
    | `timeout` | `120` | Timeout en secondes |
    | `default_since_hours` | `168` | Fenêtre par défaut (168h = 7 jours) |
 
 4. **Sauvegarder**
 5. Répéter pour **Tchap Admin** (même `base_url`)
 
-> **Important** : l'URL doit être `http://tchap-reader:8087` (nom du conteneur Docker), **pas** `http://localhost:8087` car les tools s'exécutent depuis le conteneur OpenWebUI.
+> **Important** : l'URL doit être `http://tchapreader:8087` (nom du conteneur Docker), **pas** `http://localhost:8087` car les tools s'exécutent depuis le conteneur OpenWebUI.
 
 ---
 
@@ -194,7 +194,7 @@ curl http://localhost:8087/healthz
 ### "Erreur de connexion"
 
 1. Vérifier la Valve `base_url` dans OpenWebUI :
-   - Doit être `http://tchap-reader:8087` (pas `localhost`)
+   - Doit être `http://tchapreader:8087` (pas `localhost`)
 2. Vérifier que les conteneurs sont sur le même réseau Docker :
    ```bash
    docker network inspect grafrag-experimentation_default

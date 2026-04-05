@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: tchap-reader
+  name: tchapreader
   namespace: grafrag
   labels:
-    app: tchap-reader
+    app: tchapreader
 spec:
   type: ClusterIP
   selector:
-    app: tchap-reader
+    app: tchapreader
   ports:
     - port: 8087
       targetPort: 8087

@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: tchap-reader-data
+  name: tchapreader-data
   namespace: grafrag
   labels:
-    app: tchap-reader
+    app: tchapreader
 spec:
   accessModes:
     - ReadWriteOnce
