@@ -77,7 +77,7 @@ class Tools:
     class Valves(BaseModel):
         base_url: str = Field(default="http://host.docker.internal:8087", description="URL du service tchapreader")
         timeout: int = Field(default=120, description="Timeout en secondes")
-        default_since_hours: int = Field(default=168, description="Fenêtre temporelle par défaut (heures). 168 = 7 jours.")
+        default_since_hours: int = Field(default=720, description="Fenêtre temporelle par défaut (heures). 720 = 30 jours.")
 
     class UserValves(BaseModel):
         tchap_email: str = Field(default="", description="Votre email Tchap (ex: prenom.nom@interieur.gouv.fr)")
