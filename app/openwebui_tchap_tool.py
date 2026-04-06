@@ -63,7 +63,13 @@ class Tools:
         """Get user-specific valve values."""
         if not user:
             return {}
-        return user.get("valves", {})
+        valves = user.get("valves", {})
+        # OWUI passes UserValves as a Pydantic object, not a dict
+        if valves and hasattr(valves, "model_dump"):
+            return valves.model_dump()
+        if valves and not isinstance(valves, dict):
+            return {k: getattr(valves, k, "") for k in ("tchap_email", "tchap_password", "tchap_token") if hasattr(valves, k)}
+        return valves or {}
 
     # ── 1. Connexion Tchap ───────────────────────────────────
 
