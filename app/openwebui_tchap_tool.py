@@ -291,15 +291,43 @@ class Tools:
 
     # ── 4. Analyse d'un salon ───────────────────────────────
 
+    async def _resolve_room_id(self, room_id: str, user: dict | None) -> str:
+        """If room_id looks like a name (no '!'), search for it and return the real ID."""
+        import httpx
+        if room_id.startswith("!"):
+            return room_id
+        # It's a name, search for it
+        headers = self._user_headers(user)
+        owner_id = (user or {}).get("id", "")
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(f"{self.valves.base_url}/search-rooms",
+                    params={"q": room_id, "owner_type": "user", "owner_id": owner_id}, headers=headers)
+                resp.raise_for_status()
+                rooms = resp.json().get("rooms", [])
+                # Exact match first, then partial
+                for r in rooms:
+                    if r.get("name", "").lower() == room_id.lower():
+                        return r["room_id"]
+                for r in rooms:
+                    if room_id.lower() in r.get("name", "").lower():
+                        return r["room_id"]
+        except Exception:
+            pass
+        return room_id  # Return as-is, will fail downstream
+
     async def tchap_analyze(self, room_id: str, question: str = "", since_hours: int = 0,
                              __user__: dict = None, __event_emitter__=None):
         """Synchronise et analyse un salon Tchap. Le LLM reçoit les messages pour produire une synthèse intelligente.
 
-        :param room_id: Identifiant du salon (ex: !abc:agent.tchap.gouv.fr). OBLIGATOIRE.
+        :param room_id: Identifiant ou nom du salon (ex: !abc:agent.tchap.gouv.fr ou "Canal d'entraide"). OBLIGATOIRE.
         :param question: Question spécifique. Exemples : "messages importants", "messages sans réponse", "mécontentement", "points positifs". Vide = synthèse complète.
         :param since_hours: Fenêtre en heures (0 = 7 jours par défaut, 720 = 30 jours).
         """
         import httpx
+
+        # Resolve name to room_id if needed
+        room_id = await self._resolve_room_id(room_id, __user__)
 
         if since_hours <= 0:
             since_hours = self.valves.default_since_hours
