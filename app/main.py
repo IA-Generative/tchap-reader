@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Startup and shutdown events."""
-    # Startup
     missing = settings.validate_config()
     if missing:
         logger.warning("Legacy config incomplete: %s — multi-tenant mode active", missing)
@@ -36,7 +35,6 @@ async def lifespan(application: FastAPI):
         settings.SSO_CALLBACK_BASE_URL,
     )
     yield
-    # Shutdown
     logger.info("Tchap Reader shutting down")
 
 
